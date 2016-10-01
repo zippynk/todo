@@ -1,0 +1,128 @@
+#!/usr/bin/env python3
+
+# Todo: get it all done
+# https://github.com/zippynk/todo
+# A command line tool for keeping track of your todo list
+# Usage: `todo [COMMAND] [ARGS]`
+# Run `todo --help` for more info.
+
+# (c) Copyright 2016 Nathan Krantz-Fire (a.k.a zippynk). Some rights reserved.
+
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+import pickle
+import sys
+import datetime
+import os
+import time
+
+version = 2 # Database version. Increment by 1 when changes are made to database storage.
+
+class Reminder():
+    def __init__(self,text,year,month,day,hour,minute,shabbat):
+        self.text = text
+        self.time = datetime.datetime(year,month,day,hour,minute)
+        self.id = 0 if len(reminders) == 0 else reminders[len(reminders)-1].id+1
+        self.shabbat = shabbat
+
+if len(sys.argv) < 2:
+    print("""Usage: todo [COMMAND] [ARGS]
+Type `todo --help` for more information.""")
+    exit(1)
+elif sys.argv[1].lower() == "--help":
+    print("""Usage: todo [COMMAND] [ARGS]
+
+Commands:
+add: Add a reminder.
+list: List currently-activated reminders.
+listall: List all reminders.
+remind: Lists currently-activated reminders, but in a more annoying way. Run this on your .bashrc and/or .profile script if you want to be automatically reminded upon loggin in.
+finish: Marks a reminder as complete and deletes it. Takes 1 argument, the reminder's ID.
+rename: Rename a reminder. Takes one argument, the reminder's ID.
+retime: Change the time for a reminder. Takes one argument, the reminder's ID.
+--help: Display this message.""")
+    exit(1)
+
+if os.path.isfile(os.path.expanduser("~")+"/.todo"):
+    fileContents = pickle.load(open(os.path.expanduser("~")+"/.todo","rb"))
+    if type(fileContents) is list:
+        reminders = fileContents
+        for i in reminders:
+            i.shabbat = False
+        shabbat = False
+    elif fileContents["version"] == 2:
+        reminders = pickle.load(open(os.path.expanduser("~")+"/.todo","rb"))["reminders"]
+        shabbat = pickle.load(open(os.path.expanduser("~")+"/.todo","rb"))["shabbat"]
+    else:
+        print("Database is from a newer or unrecognised version of todo. Delete the .todo file in your home directory to reset or update to the latest or applicable version of todo to continue with this database. Exiting.")
+        exit(1)
+else:
+    reminders = []
+    shabbat = False
+
+if sys.argv[1].lower() == "add":
+    text = input("What? ")
+    time = input("When? [MMDDYYYYHHMM] ")
+    if not len(time) == 12:
+        print("Incorrect time format.")
+        exit(1)
+    reminders.append(Reminder(text,int(time[4:8]),int(time[0:2]),int(time[2:4]),int(time[8:10]),int(time[10:12]),"-m" in sys.argv))
+    print("Added!")
+elif sys.argv[1].lower() == "list":
+    if shabbat:
+        print("Shabbat mode is enabled. Type `todo shabbat` to disable.")
+    for i in reminders:
+        if datetime.datetime.now() > i.time and (i.shabbat or not shabbat):
+            print("{0} | {1}/{2}/{3} at {4}:{5} | {6}".format(str(i.id).zfill(2),str(i.time.month).zfill(2),str(i.time.day).zfill(2),str(i.time.year).zfill(4),str(i.time.hour).zfill(2),str(i.time.minute).zfill(2),i.text))
+elif sys.argv[1].lower() == "listall":
+    for i in reminders:
+        print("{0} | {1}/{2}/{3} at {4}:{5} | {6}".format(str(i.id).zfill(2),str(i.time.month).zfill(2),str(i.time.day).zfill(2),str(i.time.year).zfill(4),str(i.time.hour).zfill(2),str(i.time.minute).zfill(2),i.text))
+elif sys.argv[1].lower() == "remind":
+    if shabbat:
+        print("Shabbat mode is enabled. Type `todo shabbat` to disable.")
+    activeReminders = []
+    for i in reminders:
+        if datetime.datetime.now() > i.time and (i.shabbat or not shabbat):
+            activeReminders.append(i)
+    if len(activeReminders) > 0:
+        print("\033[93m\nYou have unfinished tasks to do!\a\n")
+        time.sleep(1)
+        for i in activeReminders:
+            print("{0} | {1}/{2}/{3} at {4}:{5} | {6}\a".format(str(i.id).zfill(2),str(i.time.month).zfill(2),str(i.time.day).zfill(2),str(i.time.year).zfill(4),str(i.time.hour).zfill(2),str(i.time.minute).zfill(2),i.text))
+            time.sleep(3)
+        print("\033[0m")
+elif sys.argv[1].lower() == "finish":
+    for i in range(len(reminders)):
+        if reminders[i].id == int(sys.argv[2]):
+            reminders[i] = None
+            print("Finished!")
+    reminders.remove(None)
+elif sys.argv[1].lower() == "rename":
+    for i in range(len(reminders)):
+        if reminders[i].id == int(sys.argv[2]):
+            reminders[i].text = input("New name? ")
+            print("Renamed!")
+elif sys.argv[1].lower() == "retime":
+    for i in range(len(reminders)):
+        if reminders[i].id == int(sys.argv[2]):
+            time = input("New time? ")
+            reminders[i].time = datetime.datetime(int(time[4:8]),int(time[0:2]),int(time[2:4]),int(time[8:10]),int(time[10:12]))
+            print("Retimed!")
+elif sys.argv[1].lower() == "shabbat":
+    if len(sys.argv) > 2:
+        for i in range(len(reminders)):
+            if reminders[i].id == int(sys.argv[2]):
+                reminders[i].shabbat = not reminders[i].shabbat
+                if reminders[i].shabbat:
+                    print("Reminder {0} will now show on Shabbat.".format(int(sys.argv[2])))
+                else:
+                    print("Reminder {0} will no longer show on Shabbat.".format(int(sys.argv[2])))
+    else:
+        shabbat = not shabbat
+        if shabbat:
+            print("Shabbat mode enabled. Run this command again to disable. Shabat shalom!")
+        else:
+            print("Shabbat mode disabled. Run this command again to enable. Shevuah tov!")
+pickle.dump({"reminders":reminders, "shabbat":shabbat,"version":version}, open(os.path.expanduser("~")+"/.todo","wb"))
