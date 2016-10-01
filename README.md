@@ -13,7 +13,7 @@ To use across multiple devices, running todo on a server that is commonly SSH'd 
 
 Usage: `todo [COMMAND] [ARGS]`
 
-Commands:
+## Commands:
 add: Add a reminder.<br/>
 list: List currently-activated reminders.<br/>
 listall: List all reminders.<br/>
