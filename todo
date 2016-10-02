@@ -22,20 +22,18 @@ import time
 version = 3 # Database version. Increment by 1 when changes are made to database storage.
 
 class Reminder():
-    def __init__(self,text,year,month,day,hour,minute,shabbat):
+    def __init__(self,text,year,month,day,hour,minute,shabbat,id=None):
         self.text = text
         self.time = datetime.datetime(year,month,day,hour,minute)
-        self.id = 0 if len(reminders) == 0 else reminders[len(reminders)-1].id+1
+        if id == None:
+            self.id = 0 if len(reminders) == 0 else reminders[len(reminders)-1].id+1
+        else:
+           self.id = id
         self.shabbat = shabbat
-    def __init__(self,dictionary):
-        self.text = dictionary["text"]
-        self.time = datetime.datetime(dictionary["time"]["year"],dictionary["time"]["month"],dictionary["time"]["day"],dictionary["time"]["hour"],dictionary["time"]["minute"])
-        self.id = dictionary["id"]
-        self.shabbat = dictionary["shabbat"]
-
 def serializeDatetime(dt):
     return {"year":dt.year,"month":dt.month,"day":dt.day,"hour":dt.hour,"minute":dt.minute}
-
+def loadReminder(dictionary):
+    return Reminder(dictionary["text"],dictionary["time"]["year"],dictionary["time"]["month"],dictionary["time"]["day"],dictionary["time"]["hour"],dictionary["time"]["minute"],dictionary["shabbat"],id=dictionary["id"])
 if len(sys.argv) < 2:
     print("""Usage: todo [COMMAND] [ARGS]
 Type `todo --help` for more information.""")
@@ -76,7 +74,7 @@ if os.path.isfile(os.path.expanduser("~")+"/.todo"):
         reminders = fileContents["reminders"]
         shabbat = fileContents["shabbat"]
     elif fileContents["version"] == 3:
-        reminders = [Reminder(r) for r in fileContents["reminders"]]
+        reminders = [loadReminder(r) for r in fileContents["reminders"]]
         shabbat = fileContents["shabbat"]
     else:
         print("Database is from a newer or unrecognised version of todo. Delete the .todo file in your home directory to reset or update to the latest or applicable version of todo to continue with this database. Exiting.")
